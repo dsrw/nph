@@ -26,7 +26,7 @@ when defined(nimPreviewSlimSystem):
 const
   IndentWidth = 2
   longIndentWid = IndentWidth * 2
-  MaxLineLen = 88
+  MaxLineLen = 80
   blankAfterComplex = {nkObjectTy, nkEnumTy, nkTypeSection, nkProcDef..nkIteratorDef}
     ## If a statment is sufficiently complex as measured by the number of lines
     ## it occupies, add a blank line after it
@@ -914,7 +914,7 @@ proc gsection(g: var TOutput, n: PNode, kind: TokType, k: string) =
 
   let
     complex =
-      n.len > 1 or n.mid.len > 0 or n[0].prefix.len > 0 or overflows(g, lsub(g, n[0]))
+      n.len > 1 or n.mid.len > 0 or n[0].prefix.len > 0 # or overflows(g, lsub(g, n[0]))
   if complex:
     gmids(g, n, true)
 
@@ -1208,13 +1208,12 @@ proc gproc(g: var TOutput, n: PNode) =
     gpattern(g, n[patternPos])
 
   # If there is no body, we don't need to indent the parameters as much
-  let
-    flags =
-      if n[bodyPos].kind != nkEmpty:
-        {sfLongIndent}
-      else:
-        {}
-
+  let flags: set[SubFlag] = {}
+  # if n[bodyPos].kind != nkEmpty:
+  #   {sfLongIndent}
+  # else:
+  #   {}
+  let l = g.line
   gsub(g, n[genericParamsPos], flags)
   gsub(g, n[paramsPos], flags, extra = lsub(g, n[pragmasPos], flags)[0])
   gsub(g, n[pragmasPos], flags)
@@ -1222,6 +1221,10 @@ proc gproc(g: var TOutput, n: PNode) =
   if n[bodyPos].kind != nkEmpty:
     optSpace(g)
     putWithSpace(g, tkEquals, "=")
+    if g.line > l:
+      g.blankLine()
+    #   g.pendingNewLine = true
+
     if n[bodyPos].kind == nkStmtList and n[bodyPos].len == 0:
       # lonely mid comment needs to sit on a new line
       withIndent(g):
@@ -1635,7 +1638,7 @@ proc gsub(g: var TOutput, n: PNode, flags: SubFlags, extra: int) =
     optSpace(g)
     putWithSpace(g, tkEquals, "=")
     gmids(g, n, true, true)
-    gsubOptNL(g, n[bodyPos], strict = true)
+    gsubOptNL(g, n[bodyPos], indentNL = 0, strict = true)
   of nkDo:
     optSpace(g)
     put(g, tkDo, $tkDo)
