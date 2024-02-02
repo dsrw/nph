@@ -1200,7 +1200,7 @@ proc gproc(g: var TOutput, n: PNode) =
       {}
 
   gsub(g, n[genericParamsPos], flags)
-  gsub(g, n[paramsPos], flags, extra = lsub(g, n[pragmasPos], flags)[0])
+  gsub(g, n[paramsPos], flags, extra = lsub(g, n[pragmasPos], flags)[0] + 1)
   gsub(g, n[pragmasPos], flags)
 
   if n[bodyPos].kind != nkEmpty:
