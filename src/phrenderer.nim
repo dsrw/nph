@@ -17,7 +17,7 @@
 # that Nim shouldn't produce a warning for that:
 
 {.used.}
-
+#!fmt: off
 import "$nim"/compiler/[idents], std/[strutils, sequtils]
 import "."/[phlexer, phoptions, phast, phmsgs, phlineinfos]
 when defined(nimPreviewSlimSystem):
@@ -26,7 +26,7 @@ when defined(nimPreviewSlimSystem):
 const
   IndentWidth = 2
   longIndentWid = IndentWidth * 2
-  MaxLineLen = 88
+  MaxLineLen = 80
   blankAfterComplex = {nkObjectTy, nkEnumTy, nkTypeSection, nkProcDef .. nkIteratorDef}
     ## If a statment is sufficiently complex as measured by the number of lines
     ## it occupies, add a blank line after it
@@ -832,10 +832,10 @@ proc gsons(
     gsub(g, n[i], flags)
 
 proc gsonsNL(
-    g: var TOutput, n: PNode, start: int = 0, theEnd: int = -1, flags: SubFlags = {}
+    g: var TOutput, n: PNode, start: int = 0, theEnd: int = -1, flags: SubFlags = {}, extra = 0
 ) =
   for i in start .. n.len + theEnd:
-    gsub(g, n[i], flags)
+    gsub(g, n[i], flags, extra)
     g.optNL()
 
 proc glist(
@@ -1005,8 +1005,8 @@ proc gcolcoms(g: var TOutput, n, stmts: PNode, useSub = false) =
       optNL(g)
       gstmts(g, stmts, flags = {sfNoIndent}, doIndent = false)
 
-proc gcond(g: var TOutput, n: PNode, flags: SubFlags = {}) =
-  gsub(g, n, flags)
+proc gcond(g: var TOutput, n: PNode, flags: SubFlags = {}, extra = 0) =
+  gsub(g, n, flags, extra)
 
 proc isTrivialSub(n: PNode): bool =
   case n.kind
@@ -1064,7 +1064,7 @@ proc gtrivialBranch(g: var TOutput, n: PNode) =
 proc gif(g: var TOutput, n: PNode, flags: SubFlags) =
   gprefixes(g, n[0])
 
-  gcond(g, n[0][0], {sfLongIndent})
+  gcond(g, n[0][0], {sfLongIndent}, extra = 2)
 
   let
     # An `if` is "trivial" if it's used in an expression-like way - this helps
@@ -1342,7 +1342,7 @@ proc accentedName(g: var TOutput, n: PNode, flags: SubFlags = {}) =
   else:
     gsub(g, n, flags = flags)
 
-proc infixArgument(g: var TOutput, n: PNode, i: int, flags: SubFlags) =
+proc infixArgument(g: var TOutput, n: PNode, i: int, flags: SubFlags, extra = 0) =
   if i < 1 or i > 2:
     return
 
@@ -1351,7 +1351,7 @@ proc infixArgument(g: var TOutput, n: PNode, i: int, flags: SubFlags) =
   if needsParenthesis:
     put(g, tkParLe, "(")
 
-  gcond(g, n[i], flags)
+  gcond(g, n[i], flags, extra)
   if needsParenthesis:
     put(g, tkParRi, ")")
 
@@ -1693,18 +1693,18 @@ proc gsub(g: var TOutput, n: PNode, flags: SubFlags, extra: int) =
 
       return
 
-    infixArgument(g, n, 1, flags = flags)
+    infixArgument(g, n, 1, flags = flags, extra)
 
     let spaces = not (g.inImportLike > 0 and eqIdent(n[0], "/"))
 
     if spaces:
       optSpace(g)
 
-    gsub(g, n[0], flags = flags) # binary operator
+    gsub(g, n[0], flags = flags, extra) # binary operator
 
     let
       overflows =
-        n.len == 3 and overflows(g, nlsub(g, n[2])) and not infixHasParens(n, 2)
+        n.len == 3 and overflows(g, nlsub(g, n[2]) + extra) and not infixHasParens(n, 2)
       indent = overflows and sfNoIndent notin flags and not hasIndent(n[2])
       wid = flagIndent(flags)
       flags =
@@ -1722,7 +1722,7 @@ proc gsub(g: var TOutput, n: PNode, flags: SubFlags, extra: int) =
     elif spaces:
       optSpace(g)
 
-    infixArgument(g, n, 2, flags = flags)
+    infixArgument(g, n, 2, flags = flags, extra)
     if indent:
       dedent(g, wid)
 
@@ -2117,7 +2117,7 @@ proc gsub(g: var TOutput, n: PNode, flags: SubFlags, extra: int) =
   of nkElifBranch:
     optNL(g)
     putWithSpace(g, tkElif, "elif")
-    gcond(g, n[0], flags = {sfLongIndent})
+    gcond(g, n[0], flags = {sfLongIndent}, extra = 2)
     gcolcoms(g, n, n[1])
   of nkElse:
     optNL(g)
