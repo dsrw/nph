@@ -17,7 +17,7 @@
 # that Nim shouldn't produce a warning for that:
 
 {.used.}
-
+#!fmt: off
 import "$nim"/compiler/[idents], std/[strutils, sequtils]
 import "."/[phlexer, phoptions, phast, phmsgs, phlineinfos]
 when defined(nimPreviewSlimSystem):
@@ -26,7 +26,7 @@ when defined(nimPreviewSlimSystem):
 const
   IndentWidth = 2
   longIndentWid = IndentWidth * 2
-  MaxLineLen = when defined(nphBookExamples): 44 else: 88
+  MaxLineLen = 80
   blankAfterComplex = {nkObjectTy, nkEnumTy, nkTypeSection, nkProcDef .. nkIteratorDef}
     ## If a statment is sufficiently complex as measured by the number of lines
     ## it occupies, add a blank line after it
